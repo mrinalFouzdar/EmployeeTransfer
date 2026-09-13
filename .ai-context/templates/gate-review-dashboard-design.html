@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Gate Review Dashboard</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card-bg: #ffffff;
+    --border: #dfe3e8;
+    --text: #1f2430;
+    --muted: #6b7280;
+    --approved: #1a7f37;
+    --approved-bg: #e6f4ea;
+    --pending: #b7791f;
+    --pending-bg: #fdf3e2;
+    --blocked: #b42318;
+    --blocked-bg: #fdeceb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .spec-id { font-weight: 600; font-size: 14px; }
+  .status-pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .status-approved { color: var(--approved); background: var(--approved-bg); }
+  .status-pending { color: var(--pending); background: var(--pending-bg); }
+  .status-blocked { color: var(--blocked); background: var(--blocked-bg); }
+  .title { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+  .gates { display: flex; gap: 8px; }
+  .gate {
+    flex: 1;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 12px;
+  }
+  .gate-name { font-weight: 600; margin-bottom: 4px; }
+  .gate-meta { color: var(--muted); font-size: 11px; }
+  .comment {
+    margin-top: 6px;
+    font-size: 11px;
+    font-style: italic;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+  <h1>Gate Review Dashboard</h1>
+  <div class="subtitle">Placeholder design — populate cards from .ai-context/specs/*.spec.md Gate Approvals &amp; History tables.</div>
+
+  <div class="board" id="board">
+    <div class="card">
+      <div class="card-header">
+        <span class="spec-id">&lt;feature-slug&gt;</span>
+        <span class="status-pill status-pending">Awaiting Gate 1</span>
+      </div>
+      <div class="title">&lt;Feature Title&gt;</div>
+      <div class="gates">
+        <div class="gate">
+          <div class="gate-name">Gate 1</div>
+          <div class="gate-meta">Not reviewed</div>
+        </div>
+        <div class="gate">
+          <div class="gate-name">Gate 2</div>
+          <div class="gate-meta">Not started</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="spec-id">&lt;feature-slug&gt;</span>
+        <span class="status-pill status-approved">Gate 1 Approved</span>
+      </div>
+      <div class="title">&lt;Feature Title&gt;</div>
+      <div class="gates">
+        <div class="gate">
+          <div class="gate-name">Gate 1</div>
+          <div class="gate-meta">Approved YYYY-MM-DD</div>
+        </div>
+        <div class="gate">
+          <div class="gate-name">Gate 2</div>
+          <div class="gate-meta">In progress</div>
+        </div>
+      </div>
+      <div class="comment">"&lt;approval comment&gt;"</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="spec-id">&lt;feature-slug&gt;</span>
+        <span class="status-pill status-blocked">Changes Requested</span>
+      </div>
+      <div class="title">&lt;Feature Title&gt;</div>
+      <div class="gates">
+        <div class="gate">
+          <div class="gate-name">Gate 1</div>
+          <div class="gate-meta">Changes requested</div>
+        </div>
+        <div class="gate">
+          <div class="gate-name">Gate 2</div>
+          <div class="gate-meta">Blocked</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

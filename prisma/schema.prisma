@@ -1,0 +1,200 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Dev-seed reference data (BR-08 controlled lists) ---------------------
+// Real system of record is the HR / Core HCM system (BRD.md Q19). These
+// tables exist only to unblock local dev/test until a sync mechanism is
+// built - not a business module of their own.
+
+model Department {
+  id   String @id @default(uuid())
+  name String @unique
+
+  currentRequests  TransferRequest[] @relation("CurrentDepartment")
+  proposedRequests TransferRequest[] @relation("ProposedDepartment")
+  employeeProfiles EmployeeProfileSeed[]
+}
+
+model Location {
+  id   String @id @default(uuid())
+  name String @unique
+
+  currentRequests  TransferRequest[] @relation("CurrentLocation")
+  proposedRequests TransferRequest[] @relation("ProposedLocation")
+  employeeProfiles EmployeeProfileSeed[]
+}
+
+model Role {
+  id   String @id @default(uuid())
+  name String @unique
+
+  currentRequests  TransferRequest[] @relation("CurrentRole")
+  proposedRequests TransferRequest[] @relation("ProposedRole")
+  employeeProfiles EmployeeProfileSeed[]
+}
+
+// Dev-seed data backing the local `EmployeeProfileProvider` adapter only.
+// NOT the employees/org business module - no BRD has established one yet.
+// Real system of record is the HR / Core HCM system (BRD.md Q19); this table
+// is explicitly deferred infrastructure per
+// .ai-context/plans/internal-transfer-request.plan.md "Explicitly Deferred".
+model EmployeeProfileSeed {
+  employeeId String @id
+
+  currentDepartmentId String
+  currentLocationId   String
+  currentRoleId       String
+  managerId           String
+
+  currentDepartment Department @relation(fields: [currentDepartmentId], references: [id])
+  currentLocation   Location   @relation(fields: [currentLocationId], references: [id])
+  currentRole       Role       @relation(fields: [currentRoleId], references: [id])
+
+  hireDate                   DateTime
+  probationEndDate           DateTime?
+  probationExceptionApproved Boolean   @default(false)
+  lastTransferCompletedAt    DateTime?
+}
+
+// --- Core domain ------------------------------------------------------------
+
+enum TransferStatus {
+  DRAFT
+  SUBMITTED
+  MANAGER_CONFIRMED
+  RETURNED_FOR_AMENDMENT
+  UNDER_HR_REVIEW
+  APPROVED_IN_PROGRESS
+  PENDING_ACTION
+  ON_HOLD
+  COMPLETED
+  REJECTED
+  WITHDRAWN
+}
+
+model TransferRequest {
+  id String @id @default(uuid())
+
+  employeeId String
+
+  currentDepartmentId  String
+  currentLocationId    String
+  currentRoleId        String
+  proposedDepartmentId String
+  proposedLocationId   String
+  proposedRoleId       String
+
+  currentDepartment  Department @relation("CurrentDepartment", fields: [currentDepartmentId], references: [id])
+  currentLocation    Location   @relation("CurrentLocation", fields: [currentLocationId], references: [id])
+  currentRole        Role       @relation("CurrentRole", fields: [currentRoleId], references: [id])
+  proposedDepartment Department @relation("ProposedDepartment", fields: [proposedDepartmentId], references: [id])
+  proposedLocation   Location   @relation("ProposedLocation", fields: [proposedLocationId], references: [id])
+  proposedRole       Role       @relation("ProposedRole", fields: [proposedRoleId], references: [id])
+
+  effectiveDate DateTime
+  reason        String?
+  status        TransferStatus @default(DRAFT)
+
+  submittedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  managerDecisions ManagerDecision[]
+  hrDecision       HrDecision?
+  fulfilmentTasks  FulfilmentTask[]
+  auditEvents      AuditEvent[]
+
+  @@index([employeeId])
+}
+
+enum ManagerRole {
+  CURRENT
+  RECEIVING
+}
+
+enum ManagerDecisionType {
+  CONFIRM
+  DECLINE
+  RETURN
+}
+
+model ManagerDecision {
+  id String @id @default(uuid())
+
+  requestId String
+  request   TransferRequest @relation(fields: [requestId], references: [id])
+
+  managerRole ManagerRole
+  managerId   String
+  decision    ManagerDecisionType
+  reason      String?
+  decidedAt   DateTime            @default(now())
+
+  @@index([requestId])
+}
+
+enum HrDecisionType {
+  ELIGIBLE
+  NOT_ELIGIBLE
+  ELIGIBLE_WITH_CONDITIONS
+}
+
+model HrDecision {
+  id String @id @default(uuid())
+
+  requestId String          @unique
+  request   TransferRequest @relation(fields: [requestId], references: [id])
+
+  decision   HrDecisionType
+  reason     String?
+  conditions String?
+  decidedAt  DateTime       @default(now())
+}
+
+enum FulfilmentTaskType {
+  PAYROLL
+  IT
+  FACILITIES
+}
+
+enum FulfilmentTaskStatus {
+  NOT_APPLICABLE
+  IN_PROGRESS
+  COMPLETE
+  FAILED
+}
+
+model FulfilmentTask {
+  id String @id @default(uuid())
+
+  requestId String
+  request   TransferRequest @relation(fields: [requestId], references: [id])
+
+  taskType  FulfilmentTaskType
+  status    FulfilmentTaskStatus @default(NOT_APPLICABLE)
+  note      String?
+  updatedAt DateTime             @updatedAt
+
+  @@unique([requestId, taskType])
+}
+
+model AuditEvent {
+  id String @id @default(uuid())
+
+  requestId String
+  request   TransferRequest @relation(fields: [requestId], references: [id])
+
+  actor     String
+  action    String
+  decision  String?
+  reason    String?
+  timestamp DateTime @default(now())
+
+  @@index([requestId])
+}
