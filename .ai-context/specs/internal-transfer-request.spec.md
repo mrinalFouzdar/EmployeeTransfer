@@ -4,7 +4,7 @@
 internal-transfer-request
 
 ## Status
-Under Development
+In QA
 
 ## Roles & Assignments
 - **Developer:** supratim.jetty@intglobal.com
@@ -19,6 +19,7 @@ Journey Stages S0–S7, Known Decisions KD-B01–08/KD-T01–07.
 | Gate | Approver | Date | Outcome | Approval Comment |
 |---|---|---|---|---|
 | Gate 1 (Spec Review) | supratim.jetty@intglobal.com | 2026-08-30 | Approved | "Spec approved, now go on." |
+| Gate 1 Re-Review (AC32/AC33 addition) | supratim.jetty@intglobal.com | 2026-09-13 | Approved | User asked directly whether BR-01/BR-04 were covered; on confirming they were not, chose "Add ACs and implement now" from the offered options. |
 | Gate 2 (Code Review) | *pending* | *pending* | *pending* | *not applicable yet* |
 
 ## Intent
@@ -164,6 +165,74 @@ system — this endpoint's contract does not need to change once Q20 is resolved
 | 400 | Task not yet raised (HR eligibility not yet passed — BR-22) | `{ "error": "TASK_NOT_YET_RAISED" }` |
 | 404 | Request or task type does not exist for this request | `{ "error": "NOT_FOUND" }` |
 
+### API Contract Additions (implementation-driven, 2026-09-13)
+Discovered while implementing T03–T24: this Spec's original API01–API07 could not be built
+without three more endpoints. Documented here rather than left silently out of sync with the
+actual implementation.
+
+#### internal-transfer-request.API08 — GET /api/transfers/my-profile
+AC12 requires the capture form to pre-populate current department/location/role, but no
+endpoint returned the caller's own current profile. Returns
+`{ employeeId, currentDepartmentId, currentLocationId, currentRoleId }` for the authenticated
+caller (404 `NOT_FOUND` if no profile exists).
+
+#### internal-transfer-request.API09 — POST /api/transfers/:id/amend
+BR-14/AC29 require amendment while `Returned for Amendment`, but no endpoint was defined for
+it. Same payload shape as API01 (`departmentId`, `locationId`, `roleId`, `effectiveDate`,
+`reason`); re-runs controlled-list/no-change/effective-date validation, sets status back to
+`Submitted`, resets `submittedAt`. `409 AMENDMENT_NOT_ALLOWED` outside `Returned for
+Amendment`/`Draft`.
+
+#### internal-transfer-request.API10 — GET /api/reference-data/{departments,locations,roles}
+BR-08's controlled lists need a way for the frontend to know what the valid values are.
+Returns `{ items: [{ id, name }] }` for each of the three reference types.
+
+### Known Implementation Gap: Receiving Manager Identity
+BR-16/AC18 require receiving-manager confirmation, but no BRD/architecture data source names
+"the manager of target department/role X." Resolved by accepting an optional
+`receivingManagerId` field on API01/API09's payload (employee-supplied, not system-derived) -
+documented here since it extends the payload shape beyond what was originally specified.
+
+### API Contract Additions, Round 2 (implementation-driven, 2026-09-13)
+Not in the original Gate-1-approved Spec; added while building a usable UI on top of it, per
+user request rather than silently. None of these change existing business rules or the state
+machine - all are new, additive read paths (or a display-only data field).
+
+#### internal-transfer-request.API11 — GET /api/transfers/queues/manager-approvals
+Backs an "Approvals" view for managers. No AC in this Spec asked for a manager-facing queue -
+the original design assumed a manager would be handed a specific request id to act on. Lists
+`TransferRequest`s where the caller is the current or receiving manager, status is
+`Submitted`, and that specific role hasn't confirmed yet. Returns
+`{ items: [{ requestId, employeeId, status, effectiveDate, submittedAt }] }`.
+
+#### internal-transfer-request.API12 — GET /api/transfers/queues/hr-review
+Backs an "HR Review" view. Same gap as API11, for HR: lists all `TransferRequest`s currently
+`Under HR Review`. Requires `x-actor-role: HR` (`403 FORBIDDEN` otherwise). Same response
+shape as API11.
+
+#### `EmployeeProfileSeed.name` (schema addition, display-only)
+Added a nullable `name` column to the dev-seed table and to API08's (`my-profile`) response,
+so the UI can show "Acting as: Jane Doe" instead of a raw id. Dev/demo data only - the real
+HR/Core HCM integration (BRD.md Q19) would supply this from the system of record, not this
+table.
+
+### Acceptance Criteria Addition — BR-01/BR-04 Gap Closed (2026-09-13)
+User asked directly whether everything in the BRD was covered. Cross-checking every Business
+Rule against this Spec's Acceptance Criteria (not just recalling from memory) found that
+**BR-01** (only active employees may raise a request; those serving notice or with a pending
+exit are excluded) and **BR-04** (employees with an active disciplinary/performance-
+improvement process are not eligible without HR override) were both "Confirmed intent" in
+`BRD.md` from the start but were never carried into this Spec's original Gate-1-approved
+Acceptance Criteria (AC1-AC31 has no entry for either) - so they were never implemented. This
+predates today's UI redesign; it was simply never cross-checked BR-by-BR until now. AC32/AC33
+below close that gap, re-approved per the Gate 1 Re-Review row above. Added `isActive`,
+`hasActiveDisciplinaryProcess` and `disciplinaryOverrideApproved` to `EmployeeProfileSeed`
+(mirroring the existing `isOnProbation`/`hasProbationException` pattern) and to
+`EmployeeProfileProvider`; both new checks sit in the same eligibility block as AC9-AC11 in
+`TransferService.createRequest`. Same `403 NOT_ELIGIBLE` response shape as the API01 exception
+table already documented (that table already listed "active disciplinary process" as a
+NOT_ELIGIBLE condition; it just had no AC or implementation behind it until now).
+
 ## Acceptance Criteria
 
 **Capture & Submit (S1)**
@@ -211,6 +280,10 @@ system — this endpoint's contract does not need to change once Q20 is resolved
 30. internal-transfer-request.AC30 — Given any state transition on a request, when it occurs, then it is recorded with actor, timestamp, decision and reason (BR-33).
 31. internal-transfer-request.AC31 — Given a request lifecycle event (submission, a decision, return for amendment, or completion), when it occurs, then the employee is notified; given an action becomes pending with a stakeholder, when it remains outstanding, then that stakeholder is notified and reminded (BR-35, BR-36).
 
+**Eligibility — added 2026-09-13 (BR-01/BR-04 gap closed, see Gate 1 Re-Review above)**
+32. internal-transfer-request.AC32 — Given an employee who is not active (serving notice or has a pending exit), when they submit a transfer request, then it is rejected with `NOT_ELIGIBLE` (BR-01).
+33. internal-transfer-request.AC33 — Given an employee with an active disciplinary/performance-improvement process, when they submit a transfer request, then it is rejected with `NOT_ELIGIBLE`; if HR has recorded an override, submission succeeds (BR-04).
+
 ## Unit Test Cases (spec-derived)
 | Test ID | Maps to AC | Scenario | Expected |
 |---|---|---|---|
@@ -234,6 +307,9 @@ system — this endpoint's contract does not need to change once Q20 is resolved
 | internal-transfer-request.UT18 | AC27 | All applicable tasks report `complete` | Request status = Completed; employee notified with consolidated summary |
 | internal-transfer-request.UT19 | AC28 | Employee withdraws after organisational record already updated | 409 WITHDRAWAL_REQUIRES_HR |
 | internal-transfer-request.UT20 | AC30 | Any decision recorded on a request | Audit event includes actor, timestamp, decision, reason |
+| internal-transfer-request.UT21 | AC32 | Submit while not active (serving notice / pending exit) | 403 NOT_ELIGIBLE |
+| internal-transfer-request.UT22 | AC33 | Submit with an active disciplinary process and no HR override | 403 NOT_ELIGIBLE |
+| internal-transfer-request.UT23 | AC33 | Submit with an active disciplinary process and a recorded HR override | 201 Submitted |
 
 ## Explicitly Out of Scope
 - Cross-legal-entity, cross-country or cross-contract transfers (BRD.md OS-01) — redirected at capture, not processed by this feature.

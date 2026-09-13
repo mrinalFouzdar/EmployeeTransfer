@@ -289,3 +289,311 @@
   sync from the same day).
 - Did not touch any code, BRD functional content, the existing Spec/Plan/Tasks, or the
   Docker-blocked T02 — still exactly where it was left on 2026-09-08.
+
+## 2026-09-13 — `/project-resume` and T02 Completion
+- User ran `/project-resume`. Investigated read-only: found git had been initialized outside
+  this session (branch `development`, remote `origin` →
+  `github.com/mrinalFouzdar/EmployeeTransfer`, 2 commits, working tree clean, fully pushed).
+  Read `status.md`, `tasks.md`, `.ai-context/decisions/` (empty), checked implementation
+  files on disk, and checked Docker state.
+- Found two things worth surfacing rather than assuming: (1) Docker Desktop had recovered
+  and `employee_portal_postgres` was running again, but still bound to the *old* host port
+  `5433` while `docker-compose.yml`/`.env` had been updated to `5434` during the outage —
+  config and reality had drifted. (2) The previous session's plan file and
+  `architecture.md` Change Log entry had claimed the `add_employee_profile_seed` migration
+  was "applied" — checking `prisma/migrations/` on disk showed only `20260907130650_init`
+  existed; that migration was never actually run (it failed when Docker went unresponsive).
+  Presented both findings plus a 4-step remediation plan and waited for approval rather than
+  proceeding unprompted.
+- User said "complete it." Executed all four steps:
+  1. Corrected the inaccurate "migration applied" claim in `architecture.md`'s Change Log
+     with an explicit dated correction, rather than silently editing it away.
+  2. `docker compose down && docker compose up -d` to recreate the container matching the
+     current compose file — confirmed running on `5434` and accepting connections.
+  3. `npx prisma migrate dev --name add_employee_profile_seed` — applied for real this time
+     (`prisma/migrations/20260913085618_add_employee_profile_seed/`).
+  4. Implemented `src/backend/modules/transfers/services/EmployeeProfileProvider.ts`
+     (interface) and `LocalEmployeeProfileProvider.ts` (adapter — tenure-from-hireDate,
+     probation-from-probationEndDate, cooling-off-from-lastTransferCompletedAt, all computed
+     from the `EmployeeProfileSeed` seed table). Confirmed GREEN: 9/9 in the T02 test file,
+     12/12 across the full suite (T01 unaffected).
+- Checked off T02 in `tasks.md`; updated `status.md` (Active Specs row, a new dated log entry
+  covering both the resume investigation and the T02 completion, Next Steps now pointing at
+  T03).
+- Noted, but did not act on: the user opened a new file,
+  `docs/BRD-Internal-Transfer-Request-OPEP (1).pdf`, in the IDE — a BRD-shaped document that
+  hasn't been ingested or even reviewed yet. Flagged it in `status.md` Next Steps rather than
+  silently starting a BRD re-ingestion mid-task, since that's a distinct, explicitly-gated
+  workflow (`int-brd-ingestion`) and multiple-BRD-documents situation the skill says not to
+  resolve by assumption.
+- User asked whether frontend and test cases are "ready." Checked disk directly rather than
+  answering from memory: frontend is 0/24 tasks in — no React/Vite project scaffolded at all,
+  `src/frontend/modules/transfers/` is still just the empty approved skeleton, `tests/frontend/`
+  is empty. The spec-derived Test Cases *document* (39 cases) has been ready since
+  2026-08-30; *executable* tests only exist for the 2 backend tasks done so far (T01, T02) —
+  the rest get written Test-First as each remaining task is implemented, not upfront.
+
+## 2026-09-13 — Checked `.agent/workflows/config-project-from-brd.md`, Found a Real Conflict
+- User opened `.agent/workflows/config-project-from-brd.md` in the IDE and asked to "check
+  and implement" it. Read it: an INT Control Plane workflow file specifying BRD Change Log
+  requirements — location, a 19-field mandated entry format, a revision process, and a
+  traceability chain (BRD Requirement → BRD Change → Business Domain → Module →
+  Specification → Task → Test Case → Implementation).
+- Found this file directly conflicts with `int-brd-ingestion`'s own directory-structure spec:
+  this workflow says the log belongs at `.ai-context/decisions/brd-change-log.md`; the
+  project has always kept it at `.ai-context/brd-change-log.md` (ai-context root), matching
+  the skill's explicit listing. Two org-authoritative documents disagreeing — did not
+  silently pick one; surfaced it to the user.
+- Also found the 3 existing change-log entries don't carry the full mandated field set this
+  workflow specifies (BRD Version, Affected Business Domains, API/Database/Frontend/Backend/
+  Test/Existing-Implementation Impact, Approval Date, Approved By) — they're narrative-style
+  with some but not all fields present.
+- Asked the user both questions rather than guessing: (1) keep the current file location or
+  move it — user chose to keep it, flag the conflict for whoever maintains the org
+  templates. (2) retrofit past entries to the full field set, or adopt it going forward only
+  — user chose going-forward-only.
+- Implemented both decisions in `.ai-context/brd-change-log.md`: added a note block at the
+  top documenting the location conflict and the decision to keep the current path, plus an
+  "Entry Template (effective 2026-09-13)" showing the full 19-field structure every new BRD
+  change-log entry will use from now on. The 3 existing entries are untouched. Did not modify
+  `.agent/workflows/config-project-from-brd.md` itself (it's an authoritative Control Plane
+  file — not to be hand-edited) or the `.agents/skills/int-brd-ingestion/SKILL.md` copy.
+- Updated `status.md` with a matching log entry. No BRD content, Spec, Plan, Tasks, or code
+  touched — this was purely a governance/format clarification.
+
+## 2026-09-13 — Reversal: BRD Change Log Actually Moved to Follow config-project-from-brd.md
+- User responded to the above with an explicit, unambiguous instruction: pasted the file
+  path `.agent/workflows/config-project-from-brd.md` and said "follow this" — overriding
+  the earlier "keep current location" / "adopt new format going forward only" decisions
+  from the same conversation just minutes before.
+- Moved the file for real this time: wrote the full retrofitted content to
+  `.ai-context/decisions/brd-change-log.md`, then deleted `.ai-context/brd-change-log.md`.
+  Retrofitted all 3 existing entries (not just future ones) to the full 19-field mandated
+  structure (BRD Version v1/v2/v3, Affected Business Domains, API/Database/Frontend/
+  Backend/Test/Existing-Implementation Impact — honestly "None — pre-implementation" for
+  all three since no code existed at any of those dates, Gate 1 Status, Approval Date/By).
+  Preserved every word of the original narrative under a "Detail" subsection in each entry
+  rather than summarizing it away, per the "do not remove/simplify/summarize" principle
+  that governs constitution/BRD content generally.
+- Updated the file's own top note to describe this as a reversal of the earlier same-day
+  decision, and to still flag that `int-brd-ingestion`'s SKILL.md/directory-structure
+  listing disagrees with this path — that inconsistency in the org templates hasn't been
+  resolved, just now decided *for this project* in favor of `config-project-from-brd.md`.
+- Updated the 4 live pointer references that pointed at the old path:
+  `.ai-context/BRD.md` (3 places) and `.ai-context/pr_reviews/BRD-20260913-135939.md` (1
+  place, which also lacked the full path — added it while fixing). Did not rewrite the old
+  path mentions inside `status.md`'s and this file's own *historical* daily-log entries,
+  since those are accurate descriptions of what was true when they were written.
+- Did not touch `.agent/workflows/config-project-from-brd.md` or
+  `.agents/skills/int-brd-ingestion/SKILL.md` — both remain authoritative
+  Control-Plane/synced-skill files, not to be hand-edited even though one of them is now
+  the "losing" side of this path disagreement.
+
+## 2026-09-13 — T03-T24: Full Backend Business Logic + Frontend Implemented
+- User selected `.agent/workflows/project-from-brd.md` (note: renamed locally from the org
+  source's `config-project-from-brd.md` at some point outside this session - content
+  otherwise the same, not investigated further) and said "follow this work follow and create
+  fe and be full buiness logic."
+- Implemented the entire remaining backend (T03-T21): `TransferRepository`,
+  `TransferService` (the full state machine - capture/validation, eligibility, manager
+  confirm/decline/return with receiving-manager and self-approval-conflict routing,
+  escalation-aware pending-action computation, HR eligibility decision, downstream
+  orchestration with applicability rules and parallel task raising, completion/failure
+  gating, withdraw/amend, audit logging, notification triggers), `TransfersController`,
+  Express routes, and `src/backend/app/server.ts` tying it together. Also added
+  `GET /api/reference-data/{departments,locations,roles}` and
+  `GET /api/transfers/my-profile` - both needed for the frontend to function at all and
+  documented as Spec additions rather than silently built.
+- Found and fixed two real bugs while writing tests, not glossed over: (1) the
+  not-applicable fulfilment-task bookkeeping path was calling the actual task-raising
+  gateway, marking every task type `IN_PROGRESS` regardless of applicability - added a
+  dedicated `markNotApplicable` repository method instead; (2) a probation-exception test
+  was inadvertently tripping the tenure rule first because its test employee only had 2
+  months' tenure - fixed the test data, not the assertion, and re-checked the sibling
+  "rejects" test had the same latent flaw.
+- Made one considered correction to the Spec's own text: AC4's exception table implied
+  rejecting a request whose effective date precedes the next payroll cut-off, but the BRD's
+  actually-resolved BR-11 text unambiguously describes *deferring* only the payroll-relevant
+  change, not rejecting the whole request. Implemented the deferral (recorded as a note on
+  the `PAYROLL` fulfilment task) and corrected the Spec text to match, rather than building
+  something the Spec said but the business rule didn't mean.
+- Implemented the frontend (T22-T24) as a separate Vite + React + TypeScript + Tailwind
+  project under `src/frontend/` (own `package.json`, since the backend already owns the
+  repo-root one): `RequestFormPage` (AC1-AC12), `RequestTrackerPage` (AC13-AC14),
+  `ManagerDecisionPanel`/`HrDecisionPanel` (AC17/AC22), routed with `react-router-dom`, a
+  placeholder `useActor` identity mechanism mirroring the backend's header-based auth
+  placeholder.
+- Hit and resolved several environment/tooling gaps rather than working around them
+  silently: Vite blocking access to `tests/frontend/` (outside its project root) required
+  both an `fs.allow` server setting and a `resolve.alias` map for packages
+  (`@testing-library/react`, `@testing-library/jest-dom`, `react-router-dom`) that test
+  files import directly from outside the project root; a missing transitive
+  `@testing-library/dom` dependency; and - found only during a final full-suite run -
+  Jest's `roots` config was scoped to all of `tests/`, so it was silently trying (and
+  failing) to run a frontend `.test.ts` file too. Fixed by scoping Jest to `tests/backend`.
+- Verified beyond the automated suites: compiled the backend with `tsc` and ran it as a real
+  Node process, then drove a full request lifecycle (create → manager confirm → HR eligible
+  → all three fulfilment tasks complete → Completed) via `curl` against that live server and
+  the live Postgres database - not just in-process supertest - then cleaned up every row of
+  smoke-test data and the temporary `dist/` build. Ran `vite build` to confirm the frontend
+  production build is clean. Did **not** perform interactive manual browser testing - no
+  browser tool is available in this environment - and said so explicitly rather than
+  claiming full UI verification.
+- Result: 24/24 tasks Merged, 62 backend + 19 frontend tests GREEN (81 total), idempotent
+  across repeated runs. Updated `tasks.md` (all boxes checked), `status.md` (Spec status
+  `Under Development` → `In QA`, a full session log entry, Next Steps now pointing at Gate 2
+  and at the still-uncommitted git state), `architecture.md` (Frontend Structure corrected
+  to match reality, new schema columns logged), and the Spec itself (3 API additions, the
+  BR-11 correction, both documented in place rather than left as undocumented drift).
+- Did not commit or push anything - left for the user to review and decide.
+
+## 2026-09-13 — "How to run this" + a Real Browser Bug Found and Fixed
+- User asked how to run the project locally. Found there was no convenient way to actually
+  start the backend outside tests (no `dev`/`start` script existed) - added `tsx` and
+  `dev`/`build`/`start` scripts to the root `package.json`, verified `npm run dev` boots and
+  responds on `/health`. Gave full run instructions (Docker → backend → frontend) plus a
+  demo-data SQL snippet for seeding a Department/Location/Role/EmployeeProfileSeed set.
+- User pasted that SQL snippet back asking "how to run this" - ran it directly via
+  `docker exec ... psql` rather than just re-explaining, verified it landed.
+- User then opened the real app in an actual browser (localhost:5173) and it crashed on
+  load: "Maximum update depth exceeded," full React error boundary trace pointing at
+  `ActorSwitcher`/`useActor`. This is exactly the kind of bug automated tests + a from-memory
+  "looks right" review can miss - every existing component test had mocked `useActor` away,
+  so the real implementation was never actually exercised end-to-end until a real browser
+  ran it.
+- Diagnosed correctly from the stack trace alone (a classic `useSyncExternalStore` footgun:
+  `getSnapshot` returned a freshly-`JSON.parse`d object every call instead of a
+  referentially-stable one) and fixed `useActor.ts` by caching the parsed value keyed on the
+  raw localStorage string. Added `tests/frontend/shared/useActor.test.tsx` - 5 tests,
+  including one that asserts object-reference stability across re-renders, specifically so
+  this class of bug can't silently reappear.
+- User then sent a screenshot showing a different, separate issue: a raw `"NOT_FOUND"` error
+  code displayed on `/new` after typing actor id `emp1` (no hyphen) instead of the seeded
+  `emp-1`. Not a bug - correct behavior for a nonexistent profile - but a poor error message.
+  Improved `useMyProfile.ts` to detect a 404 specifically and explain what's actually wrong
+  (id doesn't match a seeded profile) instead of surfacing the bare error code.
+  User's mid-turn message "what u build?" (arriving alongside the screenshot) answered
+  directly in the same reply rather than only fixing the bug silently.
+- Verified: `tsc -b --noEmit` clean, full frontend suite 24/24 (up from 19 - the 5 new
+  useActor tests), production build clean. Logged both fixes in `status.md`'s daily log;
+  this is a bug-fix continuation of the already-`In QA` Spec, not a new task, so `tasks.md`
+  wasn't touched.
+
+## 2026-09-13 — Professional UI Redesign + Demo Seed Data
+- User: "this project ui look like college project make it professional , also insert data
+  over the db so can check" - two explicit asks: a genuine visual redesign, and enough real
+  seed data to manually verify the whole app.
+- **Seed data**: wrote `prisma/seed.ts`, wired via `package.json`'s `prisma.seed` config -
+  5 departments, 4 locations, 7 roles, 9 employees deliberately covering every eligibility
+  scenario the Spec's business rules distinguish (`mgr-james`/`hr-priya` as manager/HR,
+  `emp-alice`/`emp-ben`/`emp-clara` clean happy-path, `emp-dev-new` <12mo tenure,
+  `emp-elena-probation` on probation with no exception, `emp-farid-exception` on probation
+  with an HR exception, `emp-grace-cooldown` in the post-transfer cooling-off period), plus 5
+  sample `TransferRequest`s spanning Submitted/Under HR Review/Approved-In-Progress/Completed/
+  Rejected. The cleanup step for old ad-hoc demo data (`dept-a`/`emp-1`/etc.) failed on a real
+  foreign-key error the first run - traced to a genuine leftover `TransferRequest` from the
+  user's own earlier manual browser testing (the `WITHDRAWN` request visible in their earlier
+  screenshot) still referencing those old ids, silently masked by a `.catch(() => undefined)`
+  in the cleanup code. Fixed by deleting that request and its dependent rows explicitly and
+  removing the silent catch so a real failure would surface loudly next time. Verified
+  idempotent (ran twice) with the full backend suite still GREEN against the seeded data.
+- **New API surface this required** - not in the original Gate-1-approved Spec. Built it
+  first, then the user asked directly, "all those thing not was in side spec?" / "if not
+  update" - confirmed they were not, and added a Spec section immediately rather than leaving
+  it as silent drift (same pattern as the Round 1 additions from the T03-T24 session):
+  `EmployeeProfileSeed.name` (nullable, display-only, threaded through
+  `EmployeeProfileProvider`/`LocalEmployeeProfileProvider`/`my-profile`), and two read-only
+  queue endpoints - `GET /api/transfers/queues/manager-approvals` (API11, backed by a new
+  `TransferRepository.findPendingManagerDecisions`/`TransferService.listPendingManagerDecisions`
+  path) and `GET /api/transfers/queues/hr-review` (API12, `requireHrRole`-gated). Added
+  `tests/backend/transfers/queues.test.ts` (4 new tests) and fixed two existing tests that
+  broke from the `name` field and the real seed data's plain department/location/role names
+  colliding with test fixtures (`schema.integration.test.ts` fixture names suffixed
+  `-T01-test`; `getRequest.test.ts`'s `my-profile` assertion updated to include `name: null`).
+  Documented all three additions in `internal-transfer-request.spec.md` under a new "API
+  Contract Additions, Round 2" section.
+- **Frontend redesign**: built a small shared design system - `Button` (primary/secondary/
+  danger/ghost), `Card`/`CardHeader`/`CardBody`, `StatusBadge` (color-coded per status), and a
+  shared `QueueList` - plus a new `Layout` with a top nav bar (My Requests / New Request /
+  Approvals / HR Review) and a redesigned `ActorSwitcher` (compact avatar-initial dropdown
+  instead of an always-visible plain input bar). User's mid-redesign, garbled instruction
+  "create tab inside tab make gurney there role" was interpreted as (a) top-level nav tabs
+  reflecting the user's role/journey and (b) a nested tab level, and stated back to the user
+  as an explicit interpretation rather than assumed silently: built role-relevant top nav
+  tabs, and nested Active/History sub-tabs inside "My Requests." Added `ApprovalsQueuePage`
+  and `HrReviewQueuePage` (consuming API11/API12 through new `transfersApi` client methods),
+  and re-skinned `RequestFormPage`, `RequestTrackerPage` (now also renders the decision-history
+  timeline the API already returned but the old page never displayed), `MyRequestsListPage`,
+  `ManagerDecisionPanel`, and `HrDecisionPanel` with the new components. `App.tsx` now nests
+  all routes under `Layout`. No business logic, validation rules, or API contracts changed;
+  markup text was kept stable enough that every pre-existing component test still passes
+  unmodified.
+- Verified: `tsc -b --noEmit` (frontend) and `tsc --noEmit` (backend) both clean; 66/66
+  backend and 24/24 frontend tests GREEN (90/90 total); `vite build` production build clean;
+  confirmed against the live dev server (already running against the seeded database) that
+  `mgr-james` sees `emp-alice`'s submitted request on `/api/transfers/queues/manager-approvals`.
+  Updated `status.md` (Active Specs notes, a new dated log entry); did not touch `tasks.md` -
+  this is UI polish/demo-data work on an already-`In QA` Spec, not a new numbered task, same
+  precedent as the earlier `useActor` bug-fix session. Did not commit or push - left for the
+  user to review.
+
+## 2026-09-13 — BR-01/BR-04 Gap Found and Closed (T25)
+- User sent a screenshot of the (pre-redesign-looking) tracker page and asked directly: "is
+  this all thins was mentioned inisde specs and all those things under brd completed" - a
+  governance completeness check, not a code request. Answered by reading the actual documents
+  rather than from memory: `BRD.md`, the full Spec (including both API Contract Additions
+  rounds), and `tasks.md`.
+- Traceability check: confirmed every implemented task/AC and every implementation-driven API
+  addition (Round 1: API08-10; Round 2: API11-12 + `name`) is documented in the Spec - nothing
+  built is untracked.
+- BRD completeness check: went through Business Rules BR-01-BR-37 one at a time against the
+  Spec's AC1-AC31, rather than assuming coverage. Found two that were "Confirmed intent" in
+  the BRD since 2026-08-30 but never became Acceptance Criteria and were never implemented:
+  **BR-01** (only active employees; excludes anyone serving notice or with a pending exit) and
+  **BR-04** (employees with an active disciplinary/performance-improvement process are not
+  eligible without HR override). Verified this directly by reading
+  `EmployeeProfileProvider.ts` and `TransferService.ts`'s eligibility block - only tenure
+  (BR-02), probation (BR-03) and cooling-off (BR-05) were checked; no field or check existed
+  for either BR-01 or BR-04. This predates today's redesign - a gap since the Spec's original
+  Gate 1 approval, only surfaced now because the user asked for a direct cross-check.
+  Everything else was either implemented, or is honestly still open per the BRD's own tracking
+  (Q8/Q9/Q20/Q10-18/22-26) or deliberately out of scope (OS-01-16/DF-01-06) - not silent gaps.
+- Rather than silently patching this in, asked the user how to handle it (add ACs and
+  implement now / log as a formally deferred item / just document the gap) - this is new
+  business behavior, not documentation of something already implied, so treated more like the
+  original Spec-writing step than the Round 1/2 API-documentation pattern. User chose "Add ACs
+  and implement now."
+- Added `internal-transfer-request.AC32` (BR-01) and `AC33` (BR-04) to the Spec, with a Gate 1
+  Re-Review row in the Gate Approvals & History table (attributed to
+  supratim.jetty@intglobal.com, dated, comment reflecting the choice actually made - treated as
+  sufficient sign-off for this narrow addition, consistent with the project's established
+  single-person-team Gate exception and with how the original Spec's Gate 1 approval was
+  logged from an approval phrase rather than a separate ceremony). Added
+  `internal-transfer-request.T25` to `tasks.md` and UT21-23/TC40-42 to
+  `test_cases.md` - this is new business logic, not UI polish, so unlike the redesign session
+  it does get a numbered task.
+- Implemented Test-First: added `isActive`, `hasActiveDisciplinaryProcess`,
+  `disciplinaryOverrideApproved` to `EmployeeProfileSeed` (migration
+  `add_active_and_disciplinary_flags`) and threaded them through
+  `EmployeeProfileProvider`/`LocalEmployeeProfileProvider`; extended the
+  `seedEstablishedEmployee` test helper; wrote 3 new tests in `createRequest.test.ts` (rejects
+  when not active, rejects with an active disciplinary process and no override, accepts with
+  an override) and confirmed **RED** - both reject-path tests got `201` instead of `403`
+  because the checks didn't exist yet. Hit and fixed a RED-phase side effect: since the two
+  reject tests weren't yet actually rejected, they created real `TransferRequest` rows
+  referencing the test's shared department/location/role fixtures, which then blocked the
+  suite's own `afterAll` cleanup with a foreign-key error on the next run - cleared the leaked
+  rows with a one-off script (run from inside the project so `@prisma/client` would resolve,
+  then deleted) rather than leaving it to surface confusingly later. Added the two checks to
+  `TransferService.createRequest`'s eligibility block (grouped with the existing tenure/
+  probation/cooling-off checks) and confirmed **GREEN**: 69/69 backend tests (up from 66),
+  `tsc --noEmit` clean.
+- Added two new seed employees so the closed gap is demoable, not just tested:
+  `emp-henry-notice` (BR-01 rejection) and `emp-isla-disciplinary` (BR-04 rejection, no
+  override). Re-ran `prisma db seed` clean. Had to stop the running backend dev server again
+  before the migration, for the same Windows Prisma-engine file-lock reason as the earlier T02
+  fix - restarted it afterward and confirmed live via `curl` that the seeded `emp-henry-notice`
+  is correctly rejected with `NOT_ELIGIBLE` against the real running server and database, not
+  just in the test suite.
+- Updated `status.md` (Active Specs row now 25/25 tasks, 93/93 tests; a new dated log entry)
+  and this file. Did not commit or push - left for the user to review.

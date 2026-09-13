@@ -45,7 +45,10 @@ model Role {
 // is explicitly deferred infrastructure per
 // .ai-context/plans/internal-transfer-request.plan.md "Explicitly Deferred".
 model EmployeeProfileSeed {
-  employeeId String @id
+  employeeId String  @id
+  // Display name for the seeded demo data only - EmployeeProfile itself (BR-30/32-adjacent)
+  // never exposes this beyond what the UI needs to show "who am I acting as."
+  name       String?
 
   currentDepartmentId String
   currentLocationId   String
@@ -60,6 +63,14 @@ model EmployeeProfileSeed {
   probationEndDate           DateTime?
   probationExceptionApproved Boolean   @default(false)
   lastTransferCompletedAt    DateTime?
+
+  // BR-01/BR-04 (AC32/AC33, added 2026-09-13 - see Spec's Gate 1 Re-Review log): these two
+  // eligibility rules were "Confirmed intent" in the BRD from the start but were never
+  // carried into the original Gate-1-approved Spec's Acceptance Criteria, so they were never
+  // implemented until now.
+  isActive                     Boolean @default(true)
+  hasActiveDisciplinaryProcess Boolean @default(false)
+  disciplinaryOverrideApproved Boolean @default(false)
 }
 
 // --- Core domain ------------------------------------------------------------
@@ -100,6 +111,16 @@ model TransferRequest {
   effectiveDate DateTime
   reason        String?
   status        TransferStatus @default(DRAFT)
+
+  // Resolved at submission time from EmployeeProfileProvider (BR-15/BR-17). Null means no
+  // manager could be resolved (e.g. self-approval anomaly - see LocalEmployeeProfileProvider
+  // callers) and requires manual HR routing; there is no deeper org hierarchy data source in
+  // this system to auto-resolve a "next level" manager.
+  assignedManagerId String?
+  // Optional, employee-supplied at submission (BR-16). No system data source names "the
+  // manager of target department X" - this is deliberately captured from the requester
+  // rather than invented, since the BRD/Discovery Analysis does not establish one either.
+  receivingManagerId String?
 
   submittedAt DateTime?
   createdAt   DateTime  @default(now())

@@ -18,7 +18,7 @@ The Discovery Analysis document is a business-analyst-authored elaboration of th
 feature described in the earlier informal brief (same 8-step current process, same
 employee-facing capability list) — it is not a conflicting alternative source, it is the
 formal, structured successor. It is treated as authoritative per the BRD Change Management
-Process. See `.ai-context/brd-change-log.md` for the full delta/impact analysis against the
+Process. See `.ai-context/decisions/brd-change-log.md` for the full delta/impact analysis against the
 previous `.ai-context/BRD.md` baseline.
 
 **Note on document status:** the source is marked "Version 0.1, Pending business sign-off"
@@ -453,7 +453,7 @@ To be closed before Solution Design (Spec/Plan). Each carries a proposed owner.
 
 **Resolved 2026-08-30:** `Q1`–`Q7` and `Q19`, `Q21` (all previously flagged critical-path)
 have been resolved with the user acting for the Portal Product Owner / HR Process Owner —
-see the resolved Business Rules above and `.ai-context/brd-change-log.md` for the decision
+see the resolved Business Rules above and `.ai-context/decisions/brd-change-log.md` for the decision
 log. They are removed from the tables below (not duplicated) to keep this file the single
 source of truth.
 
@@ -557,7 +557,7 @@ The BRD.md baseline in place before 2026-08-30 used informal IDs `BRD-001`–`BR
 IDs are retired (not reused) in favour of the source document's own `R-01`–`R-10` /
 `BR-01`–`BR-37` scheme, which is more precise and is the client's authoritative numbering.
 No requirement content was dropped — see mapping below and the full delta in
-`.ai-context/brd-change-log.md`.
+`.ai-context/decisions/brd-change-log.md`.
 
 | Old ID | Old requirement (summary) | Now covered by |
 |---|---|---|

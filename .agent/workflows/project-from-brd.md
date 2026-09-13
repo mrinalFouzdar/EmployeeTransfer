@@ -2,7 +2,7 @@
 description: 
 ---
 
-# Config Project From Brd
+# Project From Brd
 
 The project shall maintain a change history for the Business Requirements
 Document to support requirement traceability and the INT AI-First SDD

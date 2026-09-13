@@ -31,18 +31,31 @@ All source files are `.ts` — no plain JavaScript. See `project_context.md` § 
 ## Frontend Structure (React + Vite + Tailwind, TypeScript)
 ```text
 src/frontend/
+├── package.json          # separate toolchain from the backend - own node_modules
+├── vite.config.ts        # dev server, /api proxy to :3001, Vitest config
+├── tailwind.config.js / postcss.config.js
+├── index.html            # entry: <script src="/app/main.tsx">
 ├── app/
-│   ├── routes/
-│   ├── providers/
-│   └── store/
-├── modules/
+│   ├── main.tsx          # ReactDOM root
+│   ├── App.tsx           # react-router-dom routes (no separate routes/ dir - only 3 routes)
+│   └── index.css         # @tailwind directives
+├── modules/transfers/
+│   ├── pages/            # RequestFormPage, RequestTrackerPage, MyRequestsListPage
+│   ├── components/       # ManagerDecisionPanel, HrDecisionPanel
+│   ├── hooks/            # useReferenceData, useMyProfile
+│   ├── services/         # transfersApi.ts
+│   └── utils/            # validation.ts (client-side mirror of server validation)
 └── shared/
-    ├── components/
-    ├── hooks/
-    ├── services/
-    └── utils/
+    ├── components/        # ActorSwitcher (placeholder identity picker)
+    ├── hooks/              # useActor (placeholder identity, mirrors backend's requireActor)
+    └── services/           # apiClient.ts
 ```
-Components are `.tsx`, non-component modules are `.ts` — no plain JavaScript.
+Components are `.tsx`, non-component modules are `.ts` — no plain JavaScript. Testing:
+Vitest + `@testing-library/react`, tests live in `tests/frontend/` (repo root, same
+convention as `tests/backend/`) — required an explicit `include` glob and `resolve.alias`
+entries in `vite.config.ts` since those files live outside this Vite project's own root.
+No `providers/`/`store/` — no state library introduced; the only cross-component state
+(current actor identity) uses a `useSyncExternalStore` hook backed by `localStorage`.
 
 ## Database & Data Access
 - Database: PostgreSQL
@@ -153,10 +166,24 @@ Derived from `.ai-context/BRD.md` (Internal Transfer Request BRD).
   `src/backend/shared/database/`, which was never accurate; documented the real location
   (`prisma/schema.prisma`, repo root) and current schema shape, including the local dev
   Postgres container (`docker-compose.yml`, host port `5434`). Logged the previously-unlogged
-  `EmployeeProfileSeed` dev-seed table (added during T02, migration
-  `add_employee_profile_seed`). Updated the `transfers` module's "Depends on" bullets to name
+  `EmployeeProfileSeed` dev-seed table added to the schema during T02 — **correction
+  (2026-09-13, later same day):** the `add_employee_profile_seed` migration was only
+  attempted, not applied — it failed when Docker Desktop became unresponsive, and this entry
+  originally implied it had succeeded, which was inaccurate. The model existed in
+  `prisma/schema.prisma` (and was committed to git) but not yet in any applied migration or
+  the actual database until resolved in a later session. Updated the `transfers` module's
+  "Depends on" bullets to name
   the actual `EmployeeProfileProvider`/`LocalEmployeeProfileProvider` and
   `FulfilmentTaskGateway`/`ManualFulfilmentAdapter` interfaces the approved Plan specifies,
   replacing vaguer "assumed to exist elsewhere" language. Replaced the stale "likely a
   shared/`audit` concern... to be confirmed at Plan stage" note with the Plan's actual
   decision (`AuditEvent` is a `transfers`-owned Prisma model).
+- 2026-09-13 — **T03-T24 implemented (full backend business logic + frontend).** No new
+  business module or module-boundary change - all within the approved `transfers` module.
+  Added `assignedManagerId`/`receivingManagerId` columns to `TransferRequest`
+  (migration `add_transfer_manager_fields`). Documented Frontend Structure to match what was
+  actually built (see above) rather than the earlier generic template. 3 API endpoints
+  needed to make the Spec buildable, and 1 correction to AC4/BR-11's payroll-cutoff
+  behaviour, are logged in `internal-transfer-request.spec.md` directly rather than here.
+  Full request lifecycle verified against a live compiled server + live Postgres via `curl`,
+  not just in-process tests. 62 backend + 19 frontend tests GREEN.

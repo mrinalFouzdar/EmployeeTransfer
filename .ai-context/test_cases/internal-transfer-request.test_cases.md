@@ -278,6 +278,27 @@
 - **Then:** Facilities receives a reminder notification
 - **Automated Test File:** tests/backend/transfers/notifications.test.ts
 
+### internal-transfer-request.TC40 — Inactive employee (serving notice / pending exit) cannot submit
+- **Maps to AC:** internal-transfer-request.AC32
+- **Given:** the employee is marked not active (serving notice or has a pending exit)
+- **When:** they submit a transfer request
+- **Then:** it is rejected with `403 NOT_ELIGIBLE`
+- **Automated Test File:** tests/backend/transfers/createRequest.test.ts
+
+### internal-transfer-request.TC41 — Active disciplinary process with no HR override blocks submission
+- **Maps to AC:** internal-transfer-request.AC33
+- **Given:** the employee has an active disciplinary/performance-improvement process and HR has recorded no override
+- **When:** they submit a transfer request
+- **Then:** it is rejected with `403 NOT_ELIGIBLE`
+- **Automated Test File:** tests/backend/transfers/createRequest.test.ts
+
+### internal-transfer-request.TC42 — Active disciplinary process with a recorded HR override allows submission
+- **Maps to AC:** internal-transfer-request.AC33
+- **Given:** the employee has an active disciplinary/performance-improvement process and HR has recorded an override
+- **When:** they submit a transfer request
+- **Then:** it is accepted (`201`)
+- **Automated Test File:** tests/backend/transfers/createRequest.test.ts
+
 ## Cross-Feature Integration Scenarios
 None yet — this is the first feature Spec in this project. Cross-feature scenarios (e.g.
 with a future `employees`/`org` module, or a future Payroll/IT/Facilities integration module)

@@ -8,9 +8,11 @@ describe("T01 - Prisma schema & migration (infrastructure prerequisite)", () => 
   let createdRequestId: string;
 
   beforeAll(async () => {
-    const department = await prisma.department.create({ data: { name: "Engineering" } });
-    const location = await prisma.location.create({ data: { name: "London" } });
-    const role = await prisma.role.create({ data: { name: "Software Engineer" } });
+    // Suffixed to avoid colliding with real demo/seed data using plain names like
+    // "Engineering"/"London" (this test file predates that convention - T02+ tests use it).
+    const department = await prisma.department.create({ data: { name: "Engineering-T01-test" } });
+    const location = await prisma.location.create({ data: { name: "London-T01-test" } });
+    const role = await prisma.role.create({ data: { name: "Software Engineer-T01-test" } });
     departmentId = department.id;
     locationId = location.id;
     roleId = role.id;
