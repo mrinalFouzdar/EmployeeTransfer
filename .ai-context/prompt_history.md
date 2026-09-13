@@ -247,3 +247,45 @@
   retroactively invalidated — new specs going forward follow the upgraded gate sequence.
 - Did not touch any code, `src/`, `tests/`, `prisma/`, or the Docker/migration blocker on
   T02 — that is still exactly where it was left on 2026-09-08.
+
+## 2026-09-13 — BRD Ingestion Governance Upgrade (`/int-brd-ingestion` re-run, Gate 0)
+- User re-invoked `/int-brd-ingestion` with no new BRD document attached — the updated skill
+  version introduces a mandatory **Gate 0 BRD PR Review** (BRD status must be
+  Approved/Pending Review, with a standardized 22-field review record under
+  `.ai-context/pr_reviews/`) and a much richer `constitution.md` template (Governance &
+  Roles, Testing Discipline with coverage floors, Security Posture, Architectural
+  Constraints, Non-Functional Baselines, Versioning Rules, Repository & Branching) with a
+  worked example full of specific numbers (80/70/60% coverage, OTP, JWT refresh cookies,
+  p95 latency targets) from what is clearly a different reference project (payments/auth
+  heavy), not this one.
+- Identified three genuine ambiguities rather than guessing and asked the user directly:
+  1. The template's "Author ≠ Reviewer" rule can't be satisfied as-is — Developer, Gate 1
+     Reviewer, and Gate 2 Reviewer are all the same person. User chose to document this as
+     an accepted single-person-team exception rather than fabricate a second reviewer.
+  2. Whether to populate the example's specific numbers (coverage floors, latency targets,
+     security specifics) or mark them `[Open]`. User chose `[Open]` — correctly, since
+     `int-brd-ingestion`'s own governance rule 9 forbids inventing constraints not supported
+     by the BRD, and none of those numbers come from this project's BRD.
+  3. Whether to retroactively backfill the Gate 0 BRD PR Review now, or just note it as
+     grandfathered (as had been done for the analogous Gate 1 Architecture Review gap during
+     the `int-project-setup` sync earlier in this session). User chose to formalize it now.
+- Created `.ai-context/pr_reviews/BRD-20260913-135939.md` — a full 22-field Gate 0 review,
+  Approved, explicitly labeled as a retroactive backfill (the BRD was already implicitly
+  approved via the 2026-08-30 Spec/Plan/Architecture Gate 1 approvals, before Gate 0 existed
+  as a formal step), with one criterion honestly marked "Needs Improvement" rather than
+  "Passed" (Non-Functional Requirements — the BRD itself flags Q24 as unresolved) instead of
+  papering over a real gap.
+- Added a `## Status` field to `.ai-context/BRD.md` (Approved, linking the review record).
+- Rewrote `.ai-context/constitution.md` in the new structure. First draft incorrectly
+  inferred a full name ("Supratim Jetty") from the email address for the Governance & Roles
+  table — caught and corrected before finishing, since that was never actually confirmed by
+  the user; replaced with "(name not yet confirmed)" alongside the known, confirmed email.
+  Populated only what's already established elsewhere in this project (JWT, PostgreSQL/
+  Prisma, Modular Monolith, existing Test-First practice, branch/commit-message
+  conventions); marked every other line `[Open]` with a one-line reason, rather than
+  reusing the template's example values.
+- Updated `.ai-context/status.md` (Active Specs notes, Pending Gate Reviews, a new
+  2026-09-13 Daily Execution Log entry covering both this and the earlier `int-project-setup`
+  sync from the same day).
+- Did not touch any code, BRD functional content, the existing Spec/Plan/Tasks, or the
+  Docker-blocked T02 — still exactly where it was left on 2026-09-08.

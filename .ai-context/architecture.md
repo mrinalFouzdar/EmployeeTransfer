@@ -47,8 +47,20 @@ Components are `.tsx`, non-component modules are `.ts` — no plain JavaScript.
 ## Database & Data Access
 - Database: PostgreSQL
 - ORM: Prisma
-- Schema/migrations live under `src/backend/shared/database/` once modules
-  are defined via BRD ingestion.
+- **Schema source of truth:** `prisma/schema.prisma` (repo root), applied via
+  `prisma migrate dev`; generated migrations live under `prisma/migrations/`.
+- **Shared client:** `src/backend/shared/database/prismaClient.ts` — a singleton
+  `PrismaClient` instance, reused across all modules.
+- **Local dev database:** Postgres via `docker-compose.yml` (service `postgres`, container
+  `employee_portal_postgres`), host port `5434` — deliberately not 5432/5433, both of which
+  collide with unrelated pre-existing containers on the primary dev machine.
+- **Current schema shape** (as of T02):
+  - Dev-seed reference data — `Department`, `Location`, `Role`, `EmployeeProfileSeed`. These
+    exist only to unblock local dev/test; they are explicitly **not** the real `employees`/
+    `org` business module or HR-system-of-record integration (see the `transfers` module
+    section below).
+  - Core transfer domain — `TransferRequest`, `ManagerDecision`, `HrDecision`,
+    `FulfilmentTask`, `AuditEvent`, all owned by the `transfers` module.
 
 ## Authentication & Security
 - Strategy: JWT
@@ -80,18 +92,23 @@ Derived from `.ai-context/BRD.md` (Internal Transfer Request BRD).
   master request status per KD-T01.
 - **Depends on (not owned by this module):**
   - Employee profile & organisational hierarchy data (current department, location, role,
-    reporting manager, receiving manager) — assumed to exist elsewhere in the Portal; no
-    module for this exists yet in this repo. Per KD-T02 the HR/Core HCM system remains
-    system of record for organisational data — this module consumes it, does not duplicate
-    it. Flagged as a dependency gap (see BRD.md Assumptions/Open Questions) — do not invent
-    an `employees`/`org` module until a BRD establishes it.
-  - Payroll, IT, and Facilities — modeled as external systems/teams the `transfers` module
-    orchestrates tasks to in parallel (KD-T03, KD-T04: integration-based, not manual email;
-    concrete integration readiness is open per BRD.md Q20). Not owned/modeled as internal
-    business modules by this BRD.
+    reporting manager, receiving manager) — accessed only through the `EmployeeProfileProvider`
+    interface (`src/backend/modules/transfers/services/`), currently backed by
+    `LocalEmployeeProfileProvider`, a local adapter reading the dev-seed `EmployeeProfileSeed`
+    table (T02). Per KD-T02 the HR/Core HCM system remains system of record for
+    organisational data — this module consumes it, does not duplicate it, and the local
+    adapter is an explicitly temporary stand-in. Flagged as a dependency gap (see BRD.md
+    Assumptions/Open Questions) — do not invent an `employees`/`org` module until a BRD
+    establishes it.
+  - Payroll, IT, and Facilities — accessed only through the `FulfilmentTaskGateway` interface,
+    currently backed by `ManualFulfilmentAdapter` (HR/Ops enters status by hand via API07),
+    per the approved Plan's "Explicitly Deferred" decision. Real integration readiness is
+    still open per BRD.md Q20 — the interface boundary means swapping in a push-based
+    adapter later requires no change to the `transfers` module's own code. Not owned/modeled
+    as internal business modules by this BRD.
 - **Cross-cutting requirement:** every state transition is persisted as an immutable audit
-  event (KD-T06, BR-33) — likely a shared/`audit` concern rather than `transfers`-specific,
-  to be confirmed at Plan stage.
+  event (KD-T06, BR-33). **Decided in the Plan:** `AuditEvent` is a `transfers`-owned Prisma
+  model (`prisma/schema.prisma`), not a separate shared/audit module.
 - **Microservice readiness:** No direct database access into Payroll/IT/Facilities systems;
   all cross-system interaction goes through an explicit integration/adapter boundary so the
   module can be extracted independently later.
@@ -131,3 +148,15 @@ Derived from `.ai-context/BRD.md` (Internal Transfer Request BRD).
   were approved under the *prior* process version (no Gate 0 BRD PR Review record exists for
   them) — treated as grandfathered, not retroactively invalidated; new specs going forward
   follow the upgraded gate sequence.
+- 2026-09-13 — **Documentation refresh** (no code or module-boundary change). "Database &
+  Data Access" corrected — it previously claimed schema/migrations would live under
+  `src/backend/shared/database/`, which was never accurate; documented the real location
+  (`prisma/schema.prisma`, repo root) and current schema shape, including the local dev
+  Postgres container (`docker-compose.yml`, host port `5434`). Logged the previously-unlogged
+  `EmployeeProfileSeed` dev-seed table (added during T02, migration
+  `add_employee_profile_seed`). Updated the `transfers` module's "Depends on" bullets to name
+  the actual `EmployeeProfileProvider`/`LocalEmployeeProfileProvider` and
+  `FulfilmentTaskGateway`/`ManualFulfilmentAdapter` interfaces the approved Plan specifies,
+  replacing vaguer "assumed to exist elsewhere" language. Replaced the stale "likely a
+  shared/`audit` concern... to be confirmed at Plan stage" note with the Plan's actual
+  decision (`AuditEvent` is a `transfers`-owned Prisma model).

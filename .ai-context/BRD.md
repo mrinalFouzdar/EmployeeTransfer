@@ -2,6 +2,12 @@
 
 ## Internal Transfer Request — One-Point Employee Portal
 
+## Status
+**Approved** — Gate 0 BRD PR Review, 2026-09-13 (retroactive backfill; the BRD was
+implicitly approved via the downstream Spec/Plan/Architecture Gate 1 approvals of
+2026-08-30, before the Gate 0 step existed as a formal skill requirement). See
+`.ai-context/pr_reviews/BRD-20260913-135939.md` for the full review record.
+
 ## Source Documents
 | Document | Location | Version | Status |
 |---|---|---|---|

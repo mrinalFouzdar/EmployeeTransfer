@@ -1,14 +1,37 @@
 # Project Status Board
 
-_Last updated: 2026-09-07_
+_Last updated: 2026-09-13_
 
 ## Active Specs
 
 | Spec ID | Title | Status | Owner | Last Updated | Notes |
 |---|---|---|---|---|---|
-| internal-transfer-request | Internal Transfer Request | Under Development | supratim.jetty@intglobal.com | 2026-09-07 | T01/24 GREEN (Prisma schema & migration). T02 (EmployeeProfileProvider) next. |
+| internal-transfer-request | Internal Transfer Request | Under Development | supratim.jetty@intglobal.com | 2026-09-13 | T01/24 GREEN. T02 (EmployeeProfileProvider) in progress, blocked on Docker Desktop. BRD formally Gate-0-approved 2026-09-13 (retroactive). |
 
 ## Daily Execution Log
+
+### 2026-09-13
+- **Governance sync (`/int-project-setup` re-run)**: Synced `.agent/` Control Plane from
+  updated source, added `AGENTS.md`, `.agents/skills/*`, `pr_reviews/`/`change_requests/`
+  dirs + `.gitkeep`, 3 new templates, extended `.gitignore`. Confirmed Gate 1/Gate 2
+  reviewer roster (supratim.jetty@intglobal.com for both). Recorded TypeScript-only as the
+  confirmed language in `project_context.md`/`architecture.md`. No code or existing BRD/
+  spec/plan/tasks content touched.
+- **Governance sync (`/int-brd-ingestion` re-run)**: New skill version introduces mandatory
+  Gate 0 BRD PR Review and a richer `constitution.md` template. Performed a **retroactive**
+  Gate 0 BRD PR Review (`.ai-context/pr_reviews/BRD-20260913-135939.md`, Approved) since the
+  BRD was already implicitly approved via the 2026-08-30 Spec/Plan/Architecture approval
+  chain, formalizing rather than leaving it undocumented. Added a `## Status` field to
+  `BRD.md` (Approved). Rewrote `constitution.md` to the new structure (Governance & Roles,
+  Testing Discipline, Security Posture, Architectural Constraints, Non-Functional Baselines,
+  Versioning Rules, Repository & Branching) — populated only with values already established
+  elsewhere in this project; explicitly marked `[Open]` everywhere the BRD/project has not
+  actually decided a value (coverage floors, latency targets, auth token specifics, API
+  versioning, etc.) rather than copying the template's example numbers, which belong to a
+  different kind of system (payments/OTP) and don't apply here. Documented, with user
+  sign-off, an explicit "Author ≠ Reviewer" exception: Developer/Gate 1/Gate 2 reviewer are
+  currently the same person (single-team-member project) — flagged for revisit once a second
+  reviewer joins.
 
 ### 2026-09-07
 - **internal-transfer-request**: Executed **T01 — Prisma schema & migration** under
@@ -55,6 +78,8 @@ _Last updated: 2026-09-07_
 ---
 
 ## Pending Gate Reviews
+- **Gate 0 (BRD PR Review)** — **Approved** (retroactive, 2026-09-13). See
+  `.ai-context/pr_reviews/BRD-20260913-135939.md`.
 - **Gate 2 (Code Review)** - not yet applicable; no implementation exists yet.
 - Business sign-off on the BRD content itself (Portal Product Owner + HR Process Owner) is
   still pending per the source document's own "Version 0.1" status - not a blocker to
